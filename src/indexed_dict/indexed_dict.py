@@ -6,7 +6,7 @@ from collections.abc import (
     MutableMapping,
     ItemsView,
     ValuesView,
-    KeysView,
+    KeysView
 )
 from typing import Any, overload, Optional, TypeVar, Union
 
@@ -64,8 +64,9 @@ class IndexedDict(MutableMapping[K, V]):
         """
         self._index: list[K] = []
         self._dict: dict[K, V] = {}
-        if data is not None:
-            self._add_data(self, data, **kwargs)
+        if data is None:
+            data = {}
+        self._add_data(self, data, **kwargs)
 
     def __setitem__(
         self, key_or_slice: Union[K, slice], value: Union[V, Iterable[V]]
@@ -121,6 +122,8 @@ class IndexedDict(MutableMapping[K, V]):
             del self._index[key_or_slice]
         else:
             key = key_or_slice
+            if key not in self._dict:
+                raise KeyError(key)
             self._index.remove(key)
             del self._dict[key]
 
@@ -181,20 +184,24 @@ class IndexedDict(MutableMapping[K, V]):
         _data: Union[Mapping[K, V], Iterable[tuple[K, V]]],
         **kwargs: V,
     ) -> None:
-        if isinstance(_data, Iterable) and not isinstance(_data, Mapping):
-            for k, v in _data:
-                _obj._index.append(k)
-                _obj._dict[k] = v
-        elif isinstance(_data, Mapping) and not isinstance(_data, Iterable):
+        if isinstance(_data, Mapping):
             for k, v in _data.items():
-                _obj._index.append(k)
+                if k not in _obj._dict:
+                    _obj._index.append(k)
                 _obj._dict[k] = v
-        else:
+        elif isinstance(_data, Iterable):
+            for k, v in _data:
+                if k not in _obj._dict:
+                    _obj._index.append(k)
+                _obj._dict[k] = v
+        elif _data is not None:
             raise TypeError(
                 "_data must be a mapping or iterable of (key, value) pairs"
             )
+
         for k, v in kwargs.items():
-            _obj._index.append(k)  # type: ignore
+            if k not in _obj._dict:
+                _obj._index.append(k)  # type: ignore
             _obj._dict[k] = v  # type: ignore
 
     # ——— Public Methods ———
@@ -240,12 +247,32 @@ class IndexedDict(MutableMapping[K, V]):
         """
         if key in self._dict:
             raise KeyError("insert(): key already present")
+
         if index < 0:
-            index = max(0, len(self._index) + 1 + index)
+            index = max(0, len(self._index) + index)
+
         if index > len(self._index):
             index = len(self._index)
-        self._index.insert(index, key)
-        self._dict[key] = value
+
+        new_index_list = []
+        new_dict = {}
+
+        keys_before = self._index[:index]
+        keys_after = self._index[index:]
+
+        for k in keys_before:
+            new_index_list.append(k)
+            new_dict[k] = self._dict[k]
+
+        new_index_list.append(key)
+        new_dict[key] = value
+
+        for k in keys_after:
+            new_index_list.append(k)
+            new_dict[k] = self._dict[k]
+
+        self._index = new_index_list
+        self._dict = new_dict
 
     def move_to_index(self, key: K, new_index: int) -> None:
         """
@@ -254,12 +281,36 @@ class IndexedDict(MutableMapping[K, V]):
         """
         if key not in self._dict:
             raise KeyError(key)
+
+        value = self._dict[key]
         self._index.remove(key)
+        del self._dict[key]
         if new_index < 0:
-            new_index = max(0, len(self._index) + 1 + new_index)
+            new_index = len(self._index) + new_index + 1
+            if new_index < 0:
+                new_index = 0
+
         if new_index > len(self._index):
             new_index = len(self._index)
-        self._index.insert(new_index, key)
+
+        new_index_list = []
+        new_dict = {}
+
+        keys_before = self._index[:new_index]
+        keys_after = self._index[new_index:]
+
+        for k in keys_before:
+            new_index_list.append(k)
+            new_dict[k] = self._dict[k]
+
+        new_index_list.append(key)
+        new_dict[key] = value
+
+        for k in keys_after:
+            new_index_list.append(k)
+            new_dict[k] = self._dict[k]
+        self._index = new_index_list
+        self._dict = new_dict
 
     def sort(
         self,
@@ -304,14 +355,18 @@ class IndexedDict(MutableMapping[K, V]):
         new._dict = self._dict.copy()
         return new
 
-    def pop(self, key: K, default: Any = None) -> V:
+    def pop(self, key: K, default: Any = ...) -> V:
         """
         Remove specified key and return its value.
-        Return default if not found.
+        Return default if not found and default is provided.
+        Raise KeyError if key not found and default not provided.
         """
-        if key in self._index:
+        if key in self._dict:
             self._index.remove(key)
-        return self._dict.pop(key, default)
+            return self._dict.pop(key)
+        if default is not ...:
+            return default
+        raise KeyError(key)
 
     def popitem(self) -> tuple[K, V]:
         """
@@ -330,7 +385,7 @@ class IndexedDict(MutableMapping[K, V]):
         """
         if key not in self._dict:
             self._index.append(key)
-        self._dict[key] = default  # type: ignore
+            self._dict[key] = default  # type: ignore
         return self._dict[key]
 
     def update(self, *args, **kwargs: V) -> None:
@@ -345,9 +400,15 @@ class IndexedDict(MutableMapping[K, V]):
             data = None
         else:
             data = args[0]
-        if isinstance(data, (Mapping, Iterable)):
+
+        if data is None and kwargs:
+            for k, v in kwargs.items():
+                if k not in self._dict:
+                    self._index.append(k)  # type: ignore
+                self._dict[k] = v  # type: ignore
+        elif isinstance(data, (Mapping, Iterable)):
             self._add_data(self, data, **kwargs)
-        else:
+        elif data is not None:
             raise TypeError(
                 "update() must be a mapping or iterable of key/value pairs"
             )
