@@ -10,7 +10,7 @@ permissions:
   id-token: write
 
 jobs:
-  test:
+  test-matrix:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -52,9 +52,17 @@ jobs:
             echo "full_coverage=false" >> $GITHUB_OUTPUT
           fi
 
+  gather-test-results:
+    runs-on: ubuntu-latest
+    needs: test-matrix
+    outputs:
+      full_coverage: ${{ needs.test-matrix.outputs.full_coverage }}
+    steps:
+      - run: echo "Collected test matrix results."
+
   release:
-    needs: test
-    if: needs.test.outputs.full_coverage == 'true'
+    needs: gather-test-results
+    if: needs.gather-test-results.outputs.full_coverage == 'true'
     runs-on: ubuntu-latest
     environment: pypi
     steps:
