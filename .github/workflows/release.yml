@@ -1,0 +1,82 @@
+name: Test and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version:
+          - "3.9"
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    outputs:
+      full_coverage: ${{ steps.coverage_check.outputs.full_coverage }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: 0.7.3
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests with coverage
+        run: uv run pytest --cov-report=xml
+
+      - name: Check for 100% coverage
+        id: coverage_check
+        run: |
+          total_coverage=$(grep -o 'line-rate="[0-9]\.[0-9]*"' coverage.xml | grep -o '[0-9]\.[0-9]*')
+          echo "Coverage: $total_coverage"
+          if (( $(echo "$total_coverage == 1.0" | bc -l) )); then
+            echo "Full coverage achieved!"
+            echo "full_coverage=true" >> $GITHUB_OUTPUT
+          else
+            echo "Coverage is less than 100%"
+            echo "full_coverage=false" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: test
+    if: needs.test.outputs.full_coverage == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: 0.7.3
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+  
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Build project
+        run: uv build
+
+      - name: Publish to PyPI
+        run: uv publish
