@@ -21,9 +21,6 @@ classifiers = [
 
 ]
 requires-python = ">=3.09"
-dependencies = [
-    "pytest-cov>=6.1.1",
-]
 
 [build-system]
 requires = ["hatchling"]
@@ -34,8 +31,35 @@ testing = [
     "pytest>=8.3.5",
     "pytest-cov>=6.1.1",
 ]
+tox = [
+    "tox>=4.26.0",
+    "tox-uv>=1.25.0",
+]
+
+[tool.ruff]
+line-length = 79
+lint.select = ["E", "F", "I", "N", "UP"]
+
+[tool.ruff.format]
+docstring-code-format = true
+line-ending = "lf"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-addopts = "--cov=indexed_dict"
+addopts = "--cov=indexed_dict --cov-fail-under=90"
+
+[tool.tox]
+min_version = "4.0"
+requires = ["tox", "tox-uv"]
+env_list = ["py310", "py311", "py312", "py313"]
+
+
+[tool.tox.env_run_base]
+runner = "uv-venv-lock-runner"
+description = "Run test under {base_python}"
+dependency_groups = ["testing"]
+commands = [
+  ["pytest", "--cov=indexed_dict", "--cov-report=lcov:lcov.info"],
+]
+
