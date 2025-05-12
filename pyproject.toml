@@ -7,7 +7,6 @@ authors = [{ name = "Ashlynn Antrobus", email = "ashlynn@prosepal.io" }]
 license = { text = "MIT" }
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -20,7 +19,7 @@ classifiers = [
     "Intended Audience :: Developers",
 
 ]
-requires-python = ">=3.09"
+requires-python = ">=3.10"
 
 [build-system]
 requires = ["hatchling"]

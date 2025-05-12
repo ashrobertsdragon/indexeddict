@@ -13,7 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+<<<<<<< HEAD
         python-version: ["3.10", "3.11", "3.12", "3.13"]
+=======
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+    outputs:
+      full_coverage: ${{ steps.coverage_check.outputs.full_coverage }}
+>>>>>>> 5922a8b (Change minimum version to 3.10)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
