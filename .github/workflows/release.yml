@@ -3,7 +3,6 @@ name: Test and Release
 on:
   push:
     branches:
-      - main
       - master
 
 permissions:
@@ -45,7 +44,7 @@ jobs:
         run: |
           total_coverage=$(grep -o 'line-rate="[0-9]\.[0-9]*"' coverage.xml | grep -o '[0-9]\.[0-9]*')
           echo "Coverage: $total_coverage"
-          if (( $(echo "$total_coverage == 1.0" | bc -l) )); then
+          if [[ "$total_coverage" == "1.0" ]]; then
             echo "Full coverage achieved!"
             echo "full_coverage=true" >> $GITHUB_OUTPUT
           else
