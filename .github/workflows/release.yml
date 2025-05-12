@@ -45,27 +45,42 @@ jobs:
           total_coverage=$(awk -F'"' '/line-rate=/ { print $2 }' coverage.xml || echo "0.0")
           echo "Coverage: $total_coverage"
           if awk "BEGIN {exit !($total_coverage == 1.0)}"; then
-            echo "Full coverage achieved!"
-            echo "full_coverage=true" >> $GITHUB_OUTPUT
+            echo "Full coverage on Python ${{ matrix.python-version }}"
+            touch .coverage-passed-${{ matrix.python-version }}
+            mkdir -p artifacts
+            mv .coverage-passed-${{ matrix.python-version }} artifacts/
+            echo "::notice:: Uploading pass marker for Python ${{ matrix.python-version }}"
           else
-            echo "Coverage is less than 100%"
-            echo "full_coverage=false" >> $GITHUB_OUTPUT
+            echo "Coverage too low on Python ${{ matrix.python-version }}"
+            exit 1
           fi
 
-  gather-test-results:
-    runs-on: ubuntu-latest
-    needs: test-matrix
-    outputs:
-      full_coverage: ${{ needs.test-matrix.outputs.full_coverage }}
-    steps:
-      - run: echo "Collected test matrix results."
+      - name: Upload pass marker
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-coverage-markers
+          path: artifacts/
+          if-no-files-found: error
 
   release:
-    needs: gather-test-results
-    if: needs.gather-test-results.outputs.full_coverage == 'true'
+    needs: test-matrix
     runs-on: ubuntu-latest
     environment: pypi
     steps:
+      - name: Download all coverage markers
+        uses: actions/download-artifact@v4
+        with:
+          name: full-coverage-markers
+          path: all-coverage
+
+      - name: Check for full coverage
+        run: |
+          count=$(find all-coverage -type f -name "coverage-passed-*.txt" | wc -l)
+          if ! [ $count -eq 4 ]; then
+            echo "Not all coverage markers found"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
