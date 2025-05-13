@@ -37,9 +37,9 @@ jobs:
         run: uv sync --all-extras
 
       - name: Run tests with coverage
-        run: uv run pytest --maxfail=1 --disable-warnings -q --cov-report=xml
+        run: uv run pytest --maxfail=1 --disable-warnings -q --cov-report=xml:coverage.xml
 
-      - name: Check for 100% coverage
+      - name: Check for Adequate coverage
         id: coverage_check
         run: |
           mkdir -p artifacts
