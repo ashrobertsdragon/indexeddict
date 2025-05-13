@@ -1,5 +1,6 @@
 .vscode/
 .venv/
+.qodo/
 **/__pycache__/
 .pytest_cache/
 htmlcov/
