@@ -131,9 +131,7 @@ class IndexedDict(MutableMapping[K, V]):
         """Test for equality."""
         if isinstance(other, IndexedDict):
             return list(self.items()) == list(other.items())
-        if isinstance(other, Mapping):
-            return self.to_dict() == dict(other)
-        return False
+        return self.to_dict() == dict(other) if isinstance(other, Mapping) else False
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -187,8 +185,8 @@ class IndexedDict(MutableMapping[K, V]):
         if isinstance(_data, Mapping):
             for k, v in _data.items():
                 if k not in _obj._dict:
-                    _obj._index.append(k)
-                _obj._dict[k] = v
+                    _obj._index.append(k) # type: ignore
+                _obj._dict[k] = v # type: ignore
         elif isinstance(_data, Iterable):
             for k, v in _data:
                 if k not in _obj._dict:
@@ -251,9 +249,7 @@ class IndexedDict(MutableMapping[K, V]):
         if index < 0:
             index = max(0, len(self._index) + index)
 
-        if index > len(self._index):
-            index = len(self._index)
-
+        index = min(index, len(self._index))
         new_index_list = []
         new_dict = {}
 
@@ -287,12 +283,8 @@ class IndexedDict(MutableMapping[K, V]):
         del self._dict[key]
         if new_index < 0:
             new_index = len(self._index) + new_index + 1
-            if new_index < 0:
-                new_index = 0
-
-        if new_index > len(self._index):
-            new_index = len(self._index)
-
+        new_index = max(new_index, 0)
+        new_index = min(new_index, len(self._index))
         new_index_list = []
         new_dict = {}
 
@@ -396,7 +388,7 @@ class IndexedDict(MutableMapping[K, V]):
             raise TypeError(
                 f"update expected at most 1 argument, got {len(args)}"
             )
-        elif len(args) == 0:
+        elif not args:
             data = None
         else:
             data = args[0]
