@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p artifacts
           touch artifacts/.tested-${{ matrix.python-version }}
-          COVERAGE_RATE=$(awk -F'"' '/line-rate=/ { print $2 }' coverage.xml || echo "0.0")
+          COVERAGE_RATE=$(grep -o 'line-rate="[0-9.]\+"' coverage.xml | head -n1 | cut -d'"' -f2)
           echo "Coverage: $COVERAGE_RATE"
           COVERAGE_PERCENT=$(echo "scale=2; $COVERAGE_RATE * 100" | bc)
           echo "Coverage percent: $COVERAGE_PERCENT"
