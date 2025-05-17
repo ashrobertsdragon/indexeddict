@@ -6,3 +6,7 @@
 htmlcov/
 .coverage
 coverage.xml
+.tox/
+.qlty/
+.ruff_cache/
+
