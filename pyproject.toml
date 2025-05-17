@@ -59,6 +59,6 @@ runner = "uv-venv-lock-runner"
 description = "Run test under {base_python}"
 dependency_groups = ["testing"]
 commands = [
-  ["pytest", "--cov=indexed_dict", "--cov-report=lcov:cov.info"],
+  ["pytest", "--cov=indexed_dict", "--cov-report=lcov:lcov.info"],
 ]
 
