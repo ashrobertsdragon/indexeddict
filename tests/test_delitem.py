@@ -33,8 +33,8 @@ class TestIndexedDictDelItem:
         d = IndexedDict({"a": 1, "b": 2, "c": 3})
         del d[:]
         assert len(d) == 0
-        assert list(d.keys()) == []
-        assert list(d.values()) == []
+        assert not list(d.keys())
+        assert not list(d.values())
 
     def test_delitem_slice_start(self):
         d = IndexedDict({"a": 1, "b": 2, "c": 3, "d": 4})

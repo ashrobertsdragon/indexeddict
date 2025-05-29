@@ -48,25 +48,25 @@ class TestIndexedDictInit:
         assert d.to_dict() == {"a": 1, "b": 2, "c": 3, "d": 4}
         # Check order of keys
         assert list(d.keys()) == ["a", "b", "c", "d"]
-    
+
     def test_init_with_none(self):
         """Test initializing with None."""
         d = IndexedDict(None)
         assert len(d) == 0
         assert d.to_dict() == {}
-    
+
     def test_init_with_empty_dict(self):
         """Test initializing with an empty dictionary."""
         d = IndexedDict({})
         assert len(d) == 0
         assert d.to_dict() == {}
-    
+
     def test_init_with_empty_list(self):
         """Test initializing with an empty list."""
         d = IndexedDict([])
         assert len(d) == 0
         assert d.to_dict() == {}
-    
+
     def test_init_with_duplicate_keys(self):
         """Test initializing with duplicate keys."""
         d = IndexedDict([("a", 1), ("b", 2), ("a", 3)])
@@ -75,12 +75,12 @@ class TestIndexedDictInit:
         assert d.to_dict() == {"a": 3, "b": 2}
         # Check order of keys (the first occurrence should be preserved)
         assert list(d.keys()) == ["a", "b"]
-    
+
     def test_init_with_unhashable_key(self):
         """Test initializing with an unhashable key."""
         with pytest.raises(TypeError):
             IndexedDict({[1, 2]: "unhashable"})
-    
+
     def test_init_with_invalid_data(self):
         """Test initializing with invalid data."""
         with pytest.raises(TypeError):

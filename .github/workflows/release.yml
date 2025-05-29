@@ -13,9 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-<<<<<<< HEAD
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-=======
         python-version:
           - "3.10"
           - "3.11"
@@ -23,7 +20,6 @@ jobs:
           - "3.13"
     outputs:
       full_coverage: ${{ steps.coverage_check.outputs.full_coverage }}
->>>>>>> 5922a8b (Change minimum version to 3.10)
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -35,7 +31,65 @@ jobs:
           enable-cache: true
           cache-dependency-glob: "pyproject.toml"
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests with coverage
+        run: uv run pytest --maxfail=1 --disable-warnings -q --cov-report=xml
+
+      - name: Check for 100% coverage
+        id: coverage_check
+        run: |
+          total_coverage=$(awk -F'"' '/line-rate=/ { print $2 }' coverage.xml || echo "0.0")
+          echo "Coverage: $total_coverage"
+          if awk "BEGIN {exit !($total_coverage == 1.0)}"; then
+            echo "Full coverage on Python ${{ matrix.python-version }}"
+            touch .coverage-passed-${{ matrix.python-version }}
+            mkdir -p artifacts
+            mv .coverage-passed-${{ matrix.python-version }} artifacts/
+            echo "::notice:: Uploading pass marker for Python ${{ matrix.python-version }}"
+          else
+            echo "Coverage too low on Python ${{ matrix.python-version }}"
+            exit 1
+          fi
+
+      - name: Upload pass marker
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-coverage-markers
+          path: artifacts/
+          if-no-files-found: error
+
+  release:
+    needs: test-matrix
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - name: Download all coverage markers
+        uses: actions/download-artifact@v4
+        with:
+          name: full-coverage-markers
+          path: all-coverage
+
+      - name: Check for full coverage
+        run: |
+          count=$(find all-coverage -type f -name "coverage-passed-*.txt" | wc -l)
+          if ! [ $count -eq 4 ]; then
+            echo "Not all coverage markers found"
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          version: 0.7.3
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+  
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
