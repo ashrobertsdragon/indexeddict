@@ -8,7 +8,7 @@ class TestPosition:
         assert d.position("a") == 0
         assert d.position("b") == 1
         assert d.position("c") == 2
-    
+
     def test_position_raises_value_error_for_missing_key(self):
         d = IndexedDict({"a": 1, "b": 2})
         with pytest.raises(ValueError):

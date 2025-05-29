@@ -5,3 +5,5 @@
 htmlcov/
 .coverage
 coverage.xml
+.claude/
+
