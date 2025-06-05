@@ -207,6 +207,7 @@ class IndexedDict(MutableMapping[K, V]):
         if isinstance(other, IndexedDict):
             return list(self.items()) == list(other.items())
         return self.to_dict() == dict(other) if isinstance(other, Mapping) else False
+        return self.to_dict() == dict(other) if isinstance(other, Mapping) else False
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
