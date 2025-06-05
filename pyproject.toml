@@ -1,6 +1,6 @@
 [project]
 name = "indexed-dict"
-version = "0.1.0"
+version = "0.2.0"
 description = "A dictionary that preserves insertion order and allows index-based operations."
 readme = "README.md"
 authors = [{ name = "Ashlynn Antrobus", email = "ashlynn@prosepal.io" }]
