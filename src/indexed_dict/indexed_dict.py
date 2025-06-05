@@ -40,10 +40,10 @@ class _IndexedDictValuesView(ValuesView[V]):
         self._indexed_dict = indexed_dict
 
     def __contains__(self, value: object) -> bool:
-        for k in self._indexed_dict._index:
-            if self._indexed_dict._dict[k].value == value:
-                return True
-        return False
+        return any(
+            self._indexed_dict._dict[k].value == value
+            for k in self._indexed_dict._index
+        )
 
     def __iter__(self) -> Iterator[V]:
         for k in self._indexed_dict._index:
@@ -206,7 +206,6 @@ class IndexedDict(MutableMapping[K, V]):
         """Test for equality."""
         if isinstance(other, IndexedDict):
             return list(self.items()) == list(other.items())
-        return self.to_dict() == dict(other) if isinstance(other, Mapping) else False
         return self.to_dict() == dict(other) if isinstance(other, Mapping) else False
 
     def __ne__(self, other: object) -> bool:
