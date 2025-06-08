@@ -1,107 +1,40 @@
-import sys
-from collections.abc import (
-    Iterator,
-    Iterable,
+"""IndexedDict class."""
+
+from typing import overload
+
+from indexed_dict._node import _Node
+from indexed_dict._types import (
+    Any,
     Callable,
+    ItemsView,
+    Iterable,
+    Iterator,
+    K,
+    KeysView,
     Mapping,
     MutableMapping,
-    ItemsView,
+    Self,
+    V,
     ValuesView,
-    KeysView,
 )
-from typing import Any, overload, Optional, TypeVar, Union
 
-if sys.version_info < (3, 11):
-    from typing_extensions import Self
-else:
-    from typing import Self
-
-
-K = TypeVar("K")
-V = TypeVar("V")
-
-
-class _IndexedDictKeysView(KeysView[K]):
-    def __init__(self, indexed_dict: "IndexedDict[K, V]"):
-        self._indexed_dict = indexed_dict
-
-    def __contains__(self, key: object) -> bool:
-        return key in self._indexed_dict._dict
-
-    def __iter__(self) -> Iterator[K]:
-        return iter(self._indexed_dict._index)
-
-    def __len__(self) -> int:
-        return len(self._indexed_dict._index)
-
-
-class _IndexedDictValuesView(ValuesView[V]):
-    def __init__(self, indexed_dict: "IndexedDict[K, V]"):
-        self._indexed_dict = indexed_dict
-
-    def __contains__(self, value: object) -> bool:
-        for k in self._indexed_dict._index:
-            if self._indexed_dict._dict[k].value == value:
-                return True
-        return False
-
-    def __iter__(self) -> Iterator[V]:
-        for k in self._indexed_dict._index:
-            yield self._indexed_dict._dict[k].value
-
-    def __len__(self) -> int:
-        return len(self._indexed_dict._index)
-
-
-class _IndexedDictItemsView(ItemsView[K, V]):
-    def __init__(self, indexed_dict: "IndexedDict[K, V]"):
-        self._indexed_dict = indexed_dict
-
-    def __contains__(self, item: object) -> bool:
-        if not isinstance(item, tuple) or len(item) != 2:
-            return False
-        key, value = item
-        return (
-            key in self._indexed_dict._dict
-            and self._indexed_dict._dict[key].value == value
-        )
-
-    def __iter__(self) -> Iterator[tuple[K, V]]:
-        for k in self._indexed_dict._index:
-            yield (k, self._indexed_dict._dict[k].value)
-
-    def __len__(self) -> int:
-        return len(self._indexed_dict._index)
-
-
-class _Node:
-    __slots__ = ("value", "index")
-
-    def __init__(self, value: V, index: int):
-        self.value = value
-        self.index = index
-
-    def __repr__(self):
-        return f"_Node({self.value}, {self.index})"
-
-    def __str__(self):
-        return f"({self.value}, {self.index})"
-
-    def __eq__(self, other):
-        return self.value == other.value and self.index == other.index
+from indexed_dict._views import (
+    _IndexedDictItemsView,
+    _IndexedDictKeysView,
+    _IndexedDictValuesView,
+)
 
 
 class IndexedDict(MutableMapping[K, V]):
-    """
-    A dictionary that preserves insertion order and allows index-based operations.
+    """A dictionary with indexed keys.
 
-    In addition to all the usual dict methods (key lookup, iteration, membership,
-    pop, update, etc.), you can also:
+    In addition to all the usual dict methods (key lookup, iteration, copy,
+    membership, pop, update, etc.), you can also:
 
         - Access by integer index:         `d.get_from_index(i)` or `d[i]` if
             you slice.
         - Get the key at a given index:    `d.get_key_from_index(i)`.
-        - Remove by index:                 `d.pop_from_index(i)` or `del d[i:j]`.
+        - Remove by index:                 `d.pop_from_index(i)`, `del d[i:j]`.
         - Insert at an arbitrary position: `d.insert(idx, key, value)`.
         - Move an existing key:            `d.move_to_index(key, new_idx)`.
         - Slice the dict in order:         `d[1:4]`, `del d[2:5]`,
@@ -131,24 +64,23 @@ class IndexedDict(MutableMapping[K, V]):
         data: Mapping[K, V] | Iterable[tuple[K, V]] | None = None,
         **kwargs: V,
     ) -> None:
-        """
-        Initialize an IndexedDict.
+        """Initialize an IndexedDict.
 
         Args:
-            data (Mapping[K, V] | Iterable[tuple[K, V]] | None, optional): Initial data.
-                Defaults to None.
+            data (Mapping[K, V] | Iterable[tuple[K, V]] | None, optional):
+                Initial data. Defaults to None.
             **kwargs (V): Additional key-value pairs to add to the IndexedDict.
+
         """
         self._index: list[K] = []
         self._dict: dict[K, _Node] = {}
         data = data or {}
-        self._add_data(self, data, **kwargs)
+        self._add_data(data, **kwargs)
 
     def __setitem__(
-        self, key_or_slice: Union[K, slice], value: Union[V, Iterable[V]]
+        self, key_or_slice: K | slice, value: V | Iterable[V]
     ) -> None:
-        """
-        Assign value(s).
+        """Assign value(s).
 
         - If key_or_slice is a single key, behave like dict: insert or replace.
         - If key_or_slice is a slice, value must be an iterable of new values;
@@ -156,7 +88,9 @@ class IndexedDict(MutableMapping[K, V]):
         """
         if isinstance(key_or_slice, slice):
             keys = self._index[key_or_slice]
-            if not isinstance(value, Iterable) or isinstance(value, (str, bytes)):
+            if not isinstance(value, Iterable) or isinstance(
+                value, (str | bytes)
+            ):
                 raise TypeError(
                     "Slice assignment requires a non-string iterable of values"
                 )
@@ -171,20 +105,19 @@ class IndexedDict(MutableMapping[K, V]):
             self._index.append(key_or_slice)
             self._dict[key_or_slice] = _Node(value, len(self._index) - 1)
 
-    def __getitem__(self, key_or_slice: Union[K, slice]) -> Any:
-        """
-        Retrieve item(s).
+    def __getitem__(self, key_or_slice: K | slice) -> Any:
+        """Retrieve item(s).
 
         - If key_or_slice is a key, return its value.
-        - If key_or_slice is a slice, return a list of values in that index range.
+        - If key_or_slice is a slice, return a list of values in that index
+            range.
         """
         if isinstance(key_or_slice, slice):
             return [self._dict[k].value for k in self._index[key_or_slice]]
         return self._dict[key_or_slice].value
 
-    def __delitem__(self, key_or_slice: Union[K, slice]) -> None:
-        """
-        Delete entry(ies).
+    def __delitem__(self, key_or_slice: K | slice) -> None:
+        """Delete entry(ies).
 
         - If key_or_slice is a key, remove that key and its value.
         - If key_or_slice is a slice, remove all keys in that index range.
@@ -193,7 +126,9 @@ class IndexedDict(MutableMapping[K, V]):
             for k in self._index[key_or_slice]:
                 del self._dict[k]
             del self._index[key_or_slice]
-            start_index = key_or_slice.start if key_or_slice.start is not None else 0
+            start_index = (
+                key_or_slice.start if key_or_slice.start is not None else 0
+            )
             self._resync_indices(start=start_index)
         else:
             if key_or_slice not in self._dict:
@@ -206,17 +141,24 @@ class IndexedDict(MutableMapping[K, V]):
         """Test for equality."""
         if isinstance(other, IndexedDict):
             return list(self.items()) == list(other.items())
-        return self.to_dict() == dict(other) if isinstance(other, Mapping) else False
+        return (
+            self.to_dict() == dict(other)
+            if isinstance(other, Mapping)
+            else False
+        )
 
     def __ne__(self, other: object) -> bool:
+        """Test for inequality."""
         return not self.__eq__(other)
 
     def __or__(self, other: Mapping[K, V]) -> Self:
+        """Return union of two IndexedDicts."""
         new = self.copy()
         new.update(other)
         return new
 
     def __ior__(self, other: Mapping[K, V]) -> Self:
+        """In-place union of two IndexedDicts."""
         self.update(other)
         return self
 
@@ -229,50 +171,54 @@ class IndexedDict(MutableMapping[K, V]):
         return iter(self._index)
 
     def __repr__(self) -> str:
+        """Return string representation of object."""
         items = ", ".join(f"{k!r}: {self._dict[k]!r}" for k in self._index)
         return f"{self.__class__.__name__}({{{items}}})"
 
     def __str__(self) -> str:
+        """Return string representation."""
         return str({k: self._dict[k].value for k in self._index})
 
     def __contains__(self, key: object) -> bool:
-        """Tests membership in the dict."""
+        """Test membership in the dict."""
         return key in self._dict
 
     def __bool__(self) -> bool:
-        """Checks if dict is non-empty."""
+        """Check if dict is non-empty."""
         return bool(self._dict)
 
     def __reversed__(self) -> Iterator[K]:
-        """Iterates keys in reverse order."""
+        """Iterate keys in reverse order."""
         return reversed(self._index)
 
     def __copy__(self) -> Self:
+        """Return a shallow copy of the IndexedDict."""
         return self.copy()
 
     # ——— Private Methods ———
-    @staticmethod
     def _add_data(
-        _obj: Self,
-        _data: Union[Mapping[K, V], Iterable[tuple[K, V]]],
+        self,
+        _data: Mapping[K, V] | Iterable[tuple[K, V]],
         **kwargs: V,
     ) -> None:
         """Add data to an existing or new IndexedDict."""
 
         def _add_data_to_obj(data):
             for k, v in data:
-                if k in _obj._dict:
-                    _obj._dict[k].value = v
+                if k in self._dict:
+                    self._dict[k].value = v
                 else:
-                    _obj._index.append(k)
-                    _obj._dict[k] = _Node(v, len(_obj._index) - 1)
+                    self._index.append(k)
+                    self._dict[k] = _Node(v, len(self._index) - 1)
 
         if isinstance(_data, Mapping):
             _add_data_to_obj(_data.items())
         elif isinstance(_data, Iterable):
             _add_data_to_obj(_data)
         elif _data is not None:
-            raise TypeError("_data must be a mapping or iterable of (key, value) pairs")
+            raise TypeError(
+                "_data must be a mapping or iterable of (key, value) pairs"
+            )
         _add_data_to_obj(kwargs.items())
 
     def _resync_indices(self, start: int = 0) -> None:
@@ -371,7 +317,7 @@ class IndexedDict(MutableMapping[K, V]):
     def sort(
         self,
         *,
-        key: Optional[Callable[[K], Any]] = None,
+        key: Callable[[K], Any] | None = None,
         reverse: bool = False,
     ) -> None:
         """Sort keys in-place.
@@ -380,6 +326,7 @@ class IndexedDict(MutableMapping[K, V]):
             key: optional function mapping a key → comparison key. If None,
                 sorts by key.
             reverse: if True, reverse the sort order.
+
         """
         self._index.sort(key=key, reverse=reverse)  # type: ignore
         self._resync_indices()
@@ -405,7 +352,7 @@ class IndexedDict(MutableMapping[K, V]):
 
     def copy(self) -> Self:
         """Return a shallow copy of the IndexedDict."""
-        new = self.__class__()
+        new: Self = self.__class__()
         new._index = self._index.copy()
         new._dict = self._dict.copy()
         return new
@@ -436,8 +383,8 @@ class IndexedDict(MutableMapping[K, V]):
         key = self._index.pop()
         return key, self._dict.pop(key).value
 
-    def setdefault(self, key: K, default: Optional[V] = None) -> V:
-        """Implement setdefault().
+    def setdefault(self, key: K, default: V | None = None) -> V:
+        """Insert key with a value of default if key is not in the dict.
 
         If key in dict: return its value.
         Else: insert key with default and return default.
@@ -450,9 +397,12 @@ class IndexedDict(MutableMapping[K, V]):
     def update(self, *args, **kwargs: V) -> None:
         """Update with key/value pairs.
 
-        Accepts another mapping, iterable, or kwargs."""
+        Accepts another mapping, iterable, or kwargs.
+        """
         if len(args) > 1:
-            raise TypeError(f"update expected at most 1 argument, got {len(args)}")
+            raise TypeError(
+                f"update expected at most 1 argument, got {len(args)}"
+            )
         data = args[0] if args else None
 
         if data is None and kwargs:
@@ -462,29 +412,26 @@ class IndexedDict(MutableMapping[K, V]):
                 else:
                     self._index.append(k)  # type: ignore
                     self._dict[k] = _Node(v, len(self._index) - 1)  # type: ignore
-        elif isinstance(data, (Mapping, Iterable)):
-            self._add_data(self, data, **kwargs)
+        elif isinstance(data, (Mapping | Iterable)):
+            self._add_data(data, **kwargs)
         elif data is not None:
-            raise TypeError("update() must be a mapping or iterable of key/value pairs")
+            raise TypeError(
+                "update() must be a mapping or iterable of key/value pairs"
+            )
 
     # ——— Class Methods ———
     @classmethod
-    def fromkeys(cls, iterable: Iterable[K], value: Optional[V] = None) -> Self:
-        """
-        Create a new IndexedDict with keys from iterable and all values set
-        to value.
-        """
-        new = cls()
+    def fromkeys(cls, iterable: Iterable[K], value: V | None = None) -> Self:
+        """Create new IndexedDict from iterable of keys."""
+        new: Self = cls()
         for index, k in enumerate(iterable):
             new._index.append(k)
             new._dict[k] = _Node(value, index)
         return new
 
     @classmethod
-    def fromitems(cls, data: Union[Mapping[K, V], Iterable[tuple[K, V]]]) -> Self:
-        """
-        Create a new IndexedDict with key/value pairs from iterable.
-        """
-        new = cls()
-        new._add_data(new, data)
+    def fromitems(cls, data: Mapping[K, V] | Iterable[tuple[K, V]]) -> Self:
+        """Create a new IndexedDict with key/value pairs from iterable."""
+        new: Self = cls()
+        new._add_data(data)
         return new
