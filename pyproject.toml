@@ -1,6 +1,6 @@
 [project]
 name = "indexed-dict"
-version = "0.1.0"
+version = "0.3.0"
 description = "A dictionary that preserves insertion order and allows index-based operations."
 readme = "README.md"
 authors = [{ name = "Ashlynn Antrobus", email = "ashlynn@prosepal.io" }]
@@ -53,7 +53,6 @@ min_version = "4.0"
 requires = ["tox", "tox-uv"]
 env_list = ["py310", "py311", "py312", "py313"]
 
-
 [tool.tox.env_run_base]
 runner = "uv-venv-lock-runner"
 description = "Run test under {base_python}"
@@ -61,4 +60,3 @@ dependency_groups = ["testing"]
 commands = [
   ["pytest", "--cov=indexed_dict", "--cov-report=lcov:lcov.info"],
 ]
-
