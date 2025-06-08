@@ -2,6 +2,7 @@
 
 [![Code Coverage](https://qlty.sh/badges/85860fdd-32ae-490f-a9d3-23ffc52991be/test_coverage.svg)](https://qlty.sh/gh/ashrobertsdragon/projects/indexeddict)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/indexed-dict)
+
 A dictionary that preserves insertion order and allows index-based operations.
 
 ## **Description**
