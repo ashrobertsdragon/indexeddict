@@ -51,4 +51,5 @@ def test_setitem_slice_error_not_iterable():
     with pytest.raises(TypeError):
         d[0:2] = 10  # Not an iterable
     with pytest.raises(TypeError):
-        d[0:2] = "ab"  # A string is iterable but not valid for slice assignment
+        # A string is iterable but not valid for slice assignment
+        d[0:2] = "ab"

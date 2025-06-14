@@ -23,7 +23,7 @@ __all__ = [
 class _IndexedDictKeysView(KeysView[K]):
     """Internal keys view for IndexedDict maintaining insertion order."""
 
-    def __init__(self, indexed_dict: IndexedDict[K, V]):
+    def __init__(self, indexed_dict: "IndexedDict[K, V]"):
         self._indexed_dict = indexed_dict
 
     def __contains__(self, key: object) -> bool:
@@ -39,7 +39,7 @@ class _IndexedDictKeysView(KeysView[K]):
 class _IndexedDictValuesView(ValuesView[V]):
     """Internal values view for IndexedDict maintaining insertion order."""
 
-    def __init__(self, indexed_dict: IndexedDict[K, V]):
+    def __init__(self, indexed_dict: "IndexedDict[K, V]"):
         self._indexed_dict = indexed_dict
 
     def __contains__(self, value: object) -> bool:
@@ -59,7 +59,7 @@ class _IndexedDictValuesView(ValuesView[V]):
 class _IndexedDictItemsView(ItemsView[K, V]):
     """Internal items view for IndexedDict maintaining insertion order."""
 
-    def __init__(self, indexed_dict: IndexedDict[K, V]):
+    def __init__(self, indexed_dict: "IndexedDict[K, V]"):
         self._indexed_dict = indexed_dict
 
     def __contains__(self, item: object) -> bool:
